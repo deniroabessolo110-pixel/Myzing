@@ -1,0 +1,2278 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Myzing — La scène musicale africaine ouverte à tous</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            myzing: {
+              bg: '#080B14',
+              card: '#0F1626',
+              cardHover: '#151E33',
+              border: '#1E293B',
+              blue: '#2563EB',
+              cyan: '#38BDF8',
+              glow: '#1D4ED8'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #080B14;
+      color: #F8FAFC;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    /* Personnalisation de la barre de défilement */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #080B14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1E293B;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2563EB;
+    }
+
+    /* Animation de l'égaliseur audio */
+    @keyframes eqBar {
+      0%, 100% { transform: scaleY(0.25); }
+      50% { transform: scaleY(1); }
+    }
+    .eq-playing .eq-bar-1 { animation: eqBar 0.55s ease-in-out infinite; }
+    .eq-playing .eq-bar-2 { animation: eqBar 0.42s ease-in-out infinite 0.15s; }
+    .eq-playing .eq-bar-3 { animation: eqBar 0.65s ease-in-out infinite 0.05s; }
+    .eq-playing .eq-bar-4 { animation: eqBar 0.48s ease-in-out infinite 0.25s; }
+    .eq-bar {
+      transform-origin: bottom;
+      transform: scaleY(0.25);
+      transition: transform 0.2s ease;
+    }
+
+    /* Animation disque vinyle */
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spin-disc {
+      animation: spinSlow 9s linear infinite;
+    }
+    .spin-paused {
+      animation-play-state: paused;
+    }
+
+    /* Motifs géométriques afro-modernes pour pochettes */
+    .afro-pattern {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+                        linear-gradient(45deg, rgba(56, 189, 248, 0.08) 25%, transparent 25%);
+      background-size: 20px 20px, 40px 40px;
+    }
+
+    /* Conteneur Shorts Snap */
+    .shorts-viewport {
+      height: calc(100dvh - 132px);
+    }
+    @media (min-width: 768px) {
+      .shorts-viewport {
+        height: calc(100dvh - 88px);
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
+
+  <!-- NOTIFICATION TOAST (Remplace alert()) -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-[calc(100%-2rem)]"></div>
+
+  <!-- SIMULATION DE RÉCEPTION SMS EN HAUT DE L'ÉCRAN (Pour tester l'OTP à 6 chiffres) -->
+  <div id="sms-banner-sim" class="hidden fixed top-3 left-1/2 -translate-x-1/2 z-[60] max-w-md w-[calc(100%-1.5rem)] bg-[#0F1626]/95 backdrop-blur-xl border border-sky-400/60 rounded-2xl p-4 shadow-2xl shadow-blue-950/80 transition-all duration-300">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex items-start gap-3">
+        <div class="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-300 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-extrabold text-sky-400 uppercase tracking-wider">Messages • Maintenant</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-200 mt-0.5 leading-snug">
+            <strong class="text-white">MYZING :</strong> Votre code de sécurité est <span id="sim-sms-code-display" class="font-mono font-black text-sky-300 text-base tracking-widest bg-blue-950/80 px-2 py-0.5 rounded">000000</span>. Ne le partagez pas.
+          </p>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5 flex-shrink-0">
+        <button type="button" onclick="copyAndFillOtp()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition cursor-pointer whitespace-nowrap">
+          Copier le code
+        </button>
+        <button type="button" onclick="document.getElementById('sms-banner-sim').classList.add('hidden')" class="text-[11px] text-slate-400 hover:text-white text-center cursor-pointer">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE DE VÉRIFICATION PAR SMS FAÇON FACEBOOK (6 CHIFFRES) -->
+  <div id="sms-otp-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0F1626] border border-slate-700 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl shadow-blue-950/60 space-y-5 relative">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h3 class="text-lg sm:text-xl font-extrabold text-white">Entrez le code de sécurité</h3>
+          <p class="text-xs text-slate-400 mt-1">Vérification de votre compte Myzing</p>
+        </div>
+        <button type="button" onclick="closeOtpModal()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer" title="Annuler">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <p class="text-sm text-slate-300 leading-relaxed">
+        Entrez le code à 6 chiffres envoyé par SMS au <strong id="otp-target-phone" class="text-sky-400">+241 00 00 00 00</strong>.
+      </p>
+
+      <!-- 6 cases individuelles avec passage automatique -->
+      <div id="otp-inputs-group" class="grid grid-cols-6 gap-2 sm:gap-3 pt-1">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-full h-12 sm:h-14 rounded-xl bg-[#080B14] border border-slate-700 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/25 text-center text-xl font-black text-white outline-none transition" />
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-full h-12 sm:h-14 rounded-xl bg-[#080B14] border border-slate-700 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/25 text-center text-xl font-black text-white outline-none transition" />
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-full h-12 sm:h-14 rounded-xl bg-[#080B14] border border-slate-700 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/25 text-center text-xl font-black text-white outline-none transition" />
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-full h-12 sm:h-14 rounded-xl bg-[#080B14] border border-slate-700 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/25 text-center text-xl font-black text-white outline-none transition" />
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-full h-12 sm:h-14 rounded-xl bg-[#080B14] border border-slate-700 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/25 text-center text-xl font-black text-white outline-none transition" />
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-full h-12 sm:h-14 rounded-xl bg-[#080B14] border border-slate-700 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/25 text-center text-xl font-black text-white outline-none transition" />
+      </div>
+
+      <div id="otp-error-msg" class="hidden text-xs text-red-400 font-semibold text-center">
+        Code incorrect. Vérifie le SMS reçu en haut de ton écran.
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-800">
+        <button type="button" id="resend-sms-btn" onclick="resendOtpSms()" disabled
+          class="text-xs font-semibold text-slate-500 disabled:cursor-not-allowed enabled:text-sky-400 enabled:hover:underline cursor-pointer">
+          Renvoyer le SMS (<span id="resend-countdown">30</span>s)
+        </button>
+
+        <button type="button" onclick="verifyOtpCode()"
+          class="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition cursor-pointer">
+          Continuer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE D'ACCÈS SECRET FONDATEUR (Déclenchée par 5 clics sur le logo Myzing) -->
+  <div id="secret-founder-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0F1626] border border-blue-500/40 rounded-3xl max-w-sm w-full p-7 text-center space-y-4 shadow-2xl">
+      <div class="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/40 text-sky-400 flex items-center justify-center mx-auto">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-extrabold text-white">Accès Fondateur Myzing</h3>
+      <p class="text-xs text-slate-400">Zone privée réservée au créateur de la plateforme. Entre ton code PIN secret.</p>
+      <form onsubmit="verifyAdminPin(event)" class="space-y-3">
+        <input type="password" id="admin-pin-input" maxlength="6" placeholder="Code PIN"
+          class="w-full px-4 py-3 rounded-xl bg-[#080B14] border border-slate-700 text-center text-lg tracking-widest text-white focus:outline-none focus:border-sky-400" />
+        <div class="flex gap-2">
+          <button type="button" onclick="document.getElementById('secret-founder-modal').classList.add('hidden')"
+            class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer">
+            Fermer
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer">
+            Déverrouiller
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       ÉCRAN 1 : ACCUEIL & INSCRIPTION (Style Facebook revisité Dark Blue)
+       ===================================================================== -->
+  <div id="auth-screen" class="min-h-screen flex flex-col justify-between bg-[#080B14] relative overflow-hidden">
+    <!-- Halo lumineux bleu en arrière-plan -->
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 md:py-14 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16 relative z-10">
+      
+      <!-- COLONNE GAUCHE : Identité Myzing & Promesse -->
+      <div class="w-full lg:w-1/2 text-center lg:text-left space-y-6">
+        <div class="inline-flex items-center gap-3 justify-center lg:justify-start">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center shadow-lg shadow-blue-600/30">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+          </div>
+          <span class="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-white via-sky-200 to-blue-500 bg-clip-text text-transparent">
+            Myzing
+          </span>
+        </div>
+
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-600/15 border border-sky-400/30 text-xs font-semibold text-sky-300">
+          <span>Une initiative originale de</span>
+          <strong class="text-white font-extrabold tracking-wide">ABESSOLO Deniro</strong>
+        </div>
+
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-100 leading-tight">
+          La scène musicale africaine ouverte à <span class="text-sky-400">tous les talents</span>.
+        </h1>
+
+        <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed">
+          Écoute, découvre en extraits rapides et fais décoller ta musique partout en Afrique — même si tu enregistres ton tout premier morceau aujourd'hui.
+        </p>
+
+        <!-- 3 Cartes compactes d'avantages -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-left">
+          <div class="bg-[#0F1626]/90 border border-slate-800/80 rounded-2xl p-4 hover:border-blue-500/50 transition">
+            <div class="w-8 h-8 rounded-xl bg-blue-600/20 text-sky-400 flex items-center justify-center mb-2.5 font-bold">
+              01
+            </div>
+            <h3 class="font-semibold text-sm text-white">Zéro barrière pour débuter</h3>
+            <p class="text-xs text-slate-400 mt-1">Pas besoin de label. Publie ton son en 30 secondes.</p>
+          </div>
+
+          <div class="bg-[#0F1626]/90 border border-slate-800/80 rounded-2xl p-4 hover:border-blue-500/50 transition">
+            <div class="w-8 h-8 rounded-xl bg-blue-600/20 text-sky-400 flex items-center justify-center mb-2.5 font-bold">
+              02
+            </div>
+            <h3 class="font-semibold text-sm text-white">Découverte express</h3>
+            <p class="text-xs text-slate-400 mt-1">Des extraits de 20s qui défilent pour percer vite.</p>
+          </div>
+
+          <div class="bg-[#0F1626]/90 border border-slate-800/80 rounded-2xl p-4 hover:border-blue-500/50 transition">
+            <div class="w-8 h-8 rounded-xl bg-blue-600/20 text-sky-400 flex items-center justify-center mb-2.5 font-bold">
+              03
+            </div>
+            <h3 class="font-semibold text-sm text-white">100% pensé pour l'Afrique</h3>
+            <p class="text-xs text-slate-400 mt-1">De Libreville à Abidjan, Dakar, Lagos et Kinshasa.</p>
+          </div>
+        </div>
+
+        <!-- Accès rapide aux profils récents (Façon Facebook) -->
+        <div class="pt-2">
+          <div class="text-xs font-semibold text-slate-400 mb-2.5 text-center lg:text-left">Connexions récentes (clic rapide) :</div>
+          <div class="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+            <button type="button" onclick="quickProfileLogin('Kévine Flow', 'Artiste débutant')"
+              class="flex items-center gap-2.5 bg-[#0F1626] hover:bg-[#151E33] border border-slate-800 hover:border-sky-500/50 rounded-2xl p-2 pr-4 transition cursor-pointer">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center font-black text-white text-xs">KF</div>
+              <div class="text-left">
+                <div class="text-xs font-bold text-white">Kévine Flow</div>
+                <div class="text-[10px] text-sky-400">Artiste • Libreville</div>
+              </div>
+            </button>
+            <button type="button" onclick="quickProfileLogin('Amina Diop', 'Auditeur')"
+              class="flex items-center gap-2.5 bg-[#0F1626] hover:bg-[#151E33] border border-slate-800 hover:border-sky-500/50 rounded-2xl p-2 pr-4 transition cursor-pointer">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-black text-white text-xs">AD</div>
+              <div class="text-left">
+                <div class="text-xs font-bold text-white">Amina Diop</div>
+                <div class="text-[10px] text-slate-400">Auditrice • Dakar</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLONNE DROITE : Carte Connexion / Inscription façon Facebook -->
+      <div class="w-full max-w-md">
+        <div class="bg-[#0F1626] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-blue-950/40">
+          
+          <!-- FORMULAIRE DE CONNEXION (Par défaut) -->
+          <div id="login-box" class="space-y-4">
+            <div class="text-center mb-2">
+              <h2 class="text-xl font-bold text-white">Connexion à Myzing</h2>
+              <p class="text-xs text-slate-400 mt-1">Retrouve tes artistes et tes extraits favoris</p>
+            </div>
+
+            <form id="login-form" class="space-y-3.5">
+              <div>
+                <input type="text" id="login-identifier" required placeholder="Numéro de mobile ou adresse e-mail"
+                  class="w-full px-4 py-3.5 rounded-xl bg-[#080B14] border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition text-sm" />
+              </div>
+              <div>
+                <input type="password" id="login-password" required placeholder="Mot de passe"
+                  class="w-full px-4 py-3.5 rounded-xl bg-[#080B14] border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition text-sm" />
+              </div>
+              <button type="submit"
+                class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-sky-500 text-white font-bold text-base shadow-lg shadow-blue-600/25 transition active:scale-[0.99] cursor-pointer">
+                Se connecter
+              </button>
+            </form>
+
+            <div class="text-center">
+              <button type="button" onclick="quickDemoLogin()" class="text-xs text-sky-400 hover:text-sky-300 underline underline-offset-4 cursor-pointer">
+                Entrer directement en mode démo (sans mot de passe)
+              </button>
+            </div>
+
+            <div class="border-t border-slate-800 my-4"></div>
+
+            <!-- Bouton style "Créer un nouveau compte" de Facebook -->
+            <div class="text-center">
+              <button type="button" onclick="toggleAuthMode('register')"
+                class="px-6 py-3.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/40 text-sky-300 font-bold text-sm transition cursor-pointer w-full sm:w-auto">
+                Créer un nouveau compte
+              </button>
+            </div>
+          </div>
+
+          <!-- FORMULAIRE D'INSCRIPTION (Style Facebook avec vérification SMS africaine) -->
+          <div id="register-box" class="hidden space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h2 class="text-xl font-bold text-white">S'inscrire</h2>
+                <p class="text-xs text-slate-400">Vérification rapide par SMS ou e-mail.</p>
+              </div>
+              <button type="button" onclick="toggleAuthMode('login')" class="p-2 rounded-xl bg-slate-800/70 hover:bg-slate-700 text-slate-300 text-xs cursor-pointer">
+                Retour
+              </button>
+            </div>
+
+            <form id="register-form" class="space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input type="text" id="reg-firstname" required placeholder="Prénom"
+                  class="w-full px-3.5 py-3 rounded-xl bg-[#080B14] border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm" />
+                <input type="text" id="reg-stagename" required placeholder="Nom d'artiste / Pseudo"
+                  class="w-full px-3.5 py-3 rounded-xl bg-[#080B14] border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm" />
+              </div>
+
+              <!-- Choix entre Numéro mobile africain (SMS OTP) ou E-mail -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-[11px] font-semibold text-slate-400">Contact (Vérification par SMS recommandée)</label>
+                  <button type="button" id="toggle-contact-mode-btn" onclick="toggleContactInputMode()" class="text-[11px] text-sky-400 hover:underline cursor-pointer">
+                    Utiliser plutôt un e-mail
+                  </button>
+                </div>
+
+                <!-- Champ Téléphone avec indicatifs africains -->
+                <div id="phone-input-wrapper" class="flex gap-2">
+                  <select id="reg-country-code" class="w-36 px-2.5 py-3 rounded-xl bg-[#080B14] border border-slate-700/80 text-white text-xs sm:text-sm focus:outline-none focus:border-blue-500">
+                    <option value="+241">🇬🇦 +241 Gabon</option>
+                    <option value="+225">🇨🇮 +225 Côte d'Ivoire</option>
+                    <option value="+237">🇨🇲 +237 Cameroun</option>
+                    <option value="+221">🇸🇳 +221 Sénégal</option>
+                    <option value="+243">🇨🇩 +243 RDC</option>
+                    <option value="+223">🇲🇱 +223 Mali</option>
+                    <option value="+229">🇧🇯 +229 Bénin</option>
+                    <option value="+228">🇹🇬 +228 Togo</option>
+                    <option value="+212">🇲🇦 +212 Maroc</option>
+                    <option value="+234">🇳🇬 +234 Nigeria</option>
+                  </select>
+                  <input type="tel" id="reg-phone" placeholder="07 45 89 12"
+                    class="flex-1 min-w-0 px-3.5 py-3 rounded-xl bg-[#080B14] border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm" />
+                </div>
+
+                <!-- Champ E-mail alternatif -->
+                <div id="email-input-wrapper" class="hidden">
+                  <input type="email" id="reg-email" placeholder="exemple@domaine.com"
+                    class="w-full px-3.5 py-3 rounded-xl bg-[#080B14] border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm" />
+                </div>
+              </div>
+
+              <input type="password" id="reg-password" required placeholder="Nouveau mot de passe"
+                class="w-full px-3.5 py-3 rounded-xl bg-[#080B14] border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm" />
+
+              <!-- Sélecteur visuel de rôle : Auditeur ou Artiste débutant -->
+              <div class="pt-1">
+                <label class="block text-xs font-medium text-slate-400 mb-2">Je rejoins Myzing en tant que :</label>
+                <div class="grid grid-cols-2 gap-2.5">
+                  <label class="cursor-pointer">
+                    <input type="radio" name="userRole" value="auditeur" class="peer sr-only" checked />
+                    <div class="p-3 rounded-xl bg-[#080B14] border border-slate-700 peer-checked:border-blue-500 peer-checked:bg-blue-600/15 transition text-center">
+                      <div class="text-sm font-bold text-white">Auditeur</div>
+                      <div class="text-[11px] text-slate-400 mt-0.5">Écouter & découvrir</div>
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="userRole" value="artiste" class="peer sr-only" />
+                    <div class="p-3 rounded-xl bg-[#080B14] border border-slate-700 peer-checked:border-sky-400 peer-checked:bg-sky-500/15 transition text-center">
+                      <div class="text-sm font-bold text-sky-300">Artiste débutant</div>
+                      <div class="text-[11px] text-slate-400 mt-0.5">Publier mes sons</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <p class="text-[11px] text-slate-500 leading-snug">
+                Un code SMS de confirmation à 6 chiffres sera envoyé pour activer ton profil Myzing.
+              </p>
+
+              <button type="submit"
+                class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-bold text-base shadow-lg shadow-blue-600/25 transition cursor-pointer">
+                S'inscrire sur Myzing
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Pied de page discret avec signature officielle du fondateur -->
+    <footer class="relative z-10 border-t border-slate-800/70 py-4 px-4 text-center text-xs text-slate-500">
+      <span>© 2026 <strong class="text-slate-300">Myzing</strong> — Fondé et dirigé par <strong class="text-sky-400">ABESSOLO Deniro</strong> • Tous droits réservés • Sécurisé SSL &amp; SMS OTP</span>
+    </footer>
+  </div>
+
+  <!-- =====================================================================
+       ÉCRAN 2 : APPLICATION PRINCIPALE MYZING
+       ===================================================================== -->
+  <div id="app-screen" class="hidden min-h-screen flex flex-col bg-[#080B14]">
+    
+    <!-- Bannière d'annonce modifiable par le Créateur dans l'Admin -->
+    <div id="platform-banner" class="bg-gradient-to-r from-blue-900/80 via-blue-700/60 to-sky-900/80 border-b border-blue-500/30 px-4 py-1.5 text-center text-xs font-medium text-sky-100 flex items-center justify-center gap-2">
+      <span class="inline-block w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+      <span id="banner-text">Bienvenue sur Myzing ! Découvre les nouveaux talents africains en extraits de 20 secondes.</span>
+    </div>
+
+    <!-- BARRE DE NAVIGATION SUPÉRIEURE -->
+    <header class="sticky top-0 z-30 bg-[#080B14]/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
+      <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+        
+        <!-- Logo (5 clics rapides ouvrent l'accès secret Fondateur) -->
+        <div id="brand-logo-trigger" class="flex items-center gap-2.5 cursor-pointer select-none" onclick="handleLogoSecretTap()">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center shadow-md shadow-blue-600/30">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+          </div>
+          <span class="text-xl font-black tracking-tight text-white">My<span class="text-sky-400">zing</span></span>
+        </div>
+
+        <!-- Navigation Desktop (3 onglets publics ; Espace Créateur masqué au public) -->
+        <nav class="hidden md:flex items-center bg-[#0F1626] p-1 rounded-2xl border border-slate-800">
+          <button onclick="switchTab('shorts')" data-tab="shorts"
+            class="nav-btn px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2 cursor-pointer">
+            <span>Découvrir (Extraits)</span>
+          </button>
+          <button onclick="switchTab('catalog')" data-tab="catalog"
+            class="nav-btn px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2 cursor-pointer">
+            <span>Catalogue</span>
+          </button>
+          <button onclick="switchTab('studio')" data-tab="studio"
+            class="nav-btn px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2 cursor-pointer">
+            <span>+ Publier un son</span>
+          </button>
+          <button id="desktop-admin-nav-btn" onclick="switchTab('admin')" data-tab="admin"
+            class="hidden nav-btn px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2 cursor-pointer border border-sky-500/40 text-sky-300">
+            <span>Espace Créateur</span>
+          </button>
+        </nav>
+
+        <!-- Profil connecté & Déconnexion -->
+        <div class="flex items-center gap-2.5">
+          <div class="flex items-center gap-2 bg-[#0F1626] border border-slate-800 rounded-full pl-1.5 pr-3 py-1">
+            <div id="user-avatar" class="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-xs font-bold text-white">
+              M
+            </div>
+            <div class="leading-tight">
+              <div id="user-display-name" class="text-xs font-bold text-white max-w-[100px] truncate">Invité</div>
+              <div id="user-display-role" class="text-[10px] text-sky-400 font-medium">Auditeur</div>
+            </div>
+          </div>
+          <button onclick="logout()" title="Changer de compte"
+            class="p-2 rounded-xl bg-[#0F1626] hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENU PRINCIPAL DES ONGLETS -->
+    <main class="flex-1 pb-24 md:pb-24">
+
+      <!-- ===============================================================
+           ONGLET 1 : DÉCOUVRIR (EXTRAITS VERTICAUX FAÇON TIKTOK / SNAPCHAT)
+           =============================================================== -->
+      <section id="tab-shorts" class="max-w-6xl mx-auto px-3 sm:px-4 pt-3 flex flex-col items-center justify-center">
+        <div class="w-full max-w-md relative shorts-viewport flex items-center justify-center">
+          
+          <!-- Carte Short active -->
+          <div id="short-card-container" class="w-full h-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl shadow-blue-950/50 relative flex flex-col justify-between p-5 select-none transition-all duration-300">
+            <!-- Le contenu est injecté dynamiquement par renderActiveShort() -->
+          </div>
+
+          <!-- Boutons de navigation verticale Haut / Bas sur le côté droit (Desktop & Mobile) -->
+          <div class="hidden sm:flex flex-col gap-3 ml-4">
+            <button onclick="prevShort()" aria-label="Extrait précédent"
+              class="w-12 h-12 rounded-2xl bg-[#0F1626] hover:bg-blue-600 border border-slate-700 text-white flex items-center justify-center shadow-lg transition cursor-pointer">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+            <button onclick="nextShort()" aria-label="Extrait suivant"
+              class="w-12 h-12 rounded-2xl bg-[#0F1626] hover:bg-blue-600 border border-slate-700 text-white flex items-center justify-center shadow-lg transition cursor-pointer">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===============================================================
+           ONGLET 2 : CATALOGUE (Grille façon Spotify Dark Blue)
+           =============================================================== -->
+      <section id="tab-catalog" class="hidden max-w-6xl mx-auto px-4 pt-6 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-extrabold text-white">Catalogue Panafricain</h2>
+            <p class="text-sm text-slate-400">Tous les morceaux publiés par les artistes émergents et confirmés</p>
+          </div>
+
+          <!-- Barre de recherche -->
+          <div class="relative w-full md:w-80">
+            <input type="text" id="catalog-search" oninput="renderCatalog()" placeholder="Rechercher un artiste, un titre, un pays..."
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0F1626] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+            <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Filtres par genre -->
+        <div id="genre-filters" class="flex items-center gap-2 overflow-x-auto pb-1">
+          <!-- Injecté par JS -->
+        </div>
+
+        <!-- Grille des morceaux -->
+        <div id="catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Injecté par JS -->
+        </div>
+      </section>
+
+      <!-- ===============================================================
+           ONGLET 3 : STUDIO ARTISTE (+ Publier un son sans barrière)
+           =============================================================== -->
+      <section id="tab-studio" class="hidden max-w-2xl mx-auto px-4 pt-6">
+        <div class="bg-[#0F1626] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-11 h-11 rounded-2xl bg-blue-600/20 border border-blue-500/40 text-sky-400 flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-xl sm:text-2xl font-extrabold text-white">Studio Artiste Myzing</h2>
+              <p class="text-xs sm:text-sm text-slate-400">Publie ton morceau immédiatement dans le fil Découvrir et le Catalogue.</p>
+            </div>
+          </div>
+
+          <form id="publish-form" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Titre du morceau *</label>
+                <input type="text" id="pub-title" required placeholder="Ex: Nuit à Libreville"
+                  class="w-full px-4 py-3 rounded-xl bg-[#080B14] border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Nom d'artiste / Groupe *</label>
+                <input type="text" id="pub-artist" required placeholder="Ex: Kévine Flow"
+                  class="w-full px-4 py-3 rounded-xl bg-[#080B14] border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Pays d'origine *</label>
+                <select id="pub-country" class="w-full px-4 py-3 rounded-xl bg-[#080B14] border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500">
+                  <option value="Gabon">Gabon</option>
+                  <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+                  <option value="Sénégal">Sénégal</option>
+                  <option value="Cameroun">Cameroun</option>
+                  <option value="Nigeria">Nigeria</option>
+                  <option value="RDC">RDC</option>
+                  <option value="Mali">Mali</option>
+                  <option value="Bénin">Bénin</option>
+                  <option value="Togo">Togo</option>
+                  <option value="Guinée">Guinée</option>
+                </select>
+              </div>
+            <!-- Ambiance sonore : Vrai fichier audio MP3/WAV OU Synthétiseur Myzing -->
+            <div class="p-4 rounded-2xl bg-[#080B14] border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-sky-400 uppercase tracking-wider">Source Audio du Morceau *</label>
+                <span class="text-[11px] text-slate-400">MP3 / WAV ou Beat intégré</span>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Importer ton fichier audio (MP3, WAV, M4A)</label>
+                <input type="file" id="pub-audio-file" accept="audio/*"
+                  class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer" />
+              </div>
+
+              <div class="pt-1 border-t border-slate-800/80">
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Ou choisir un beat généré si tu n'as pas encore de fichier :</label>
+                <select id="pub-vibe" class="w-full px-4 py-2.5 rounded-xl bg-[#0F1626] border border-slate-700 text-white text-xs sm:text-sm focus:outline-none focus:border-blue-500">
+                  <option value="0">Groove Afrobeat Solaire (108 BPM)</option>
+                  <option value="1">Basse Amapiano Nocturne (114 BPM)</option>
+                  <option value="2">Afro-Trap / Drill Percutant (132 BPM)</option>
+                  <option value="3">Mélodie Douce Afro-Soul (96 BPM)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Couleur de pochette ou image locale -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Couleur de pochette</label>
+                <div class="flex gap-2">
+                  <label class="cursor-pointer">
+                    <input type="radio" name="pubGradient" value="from-blue-600 via-indigo-900 to-slate-950" class="peer sr-only" checked />
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-950 border-2 border-transparent peer-checked:border-white"></div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="pubGradient" value="from-sky-500 via-blue-900 to-slate-950" class="peer sr-only" />
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-950 border-2 border-transparent peer-checked:border-white"></div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="pubGradient" value="from-cyan-500 via-teal-900 to-slate-950" class="peer sr-only" />
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-950 border-2 border-transparent peer-checked:border-white"></div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="pubGradient" value="from-violet-600 via-blue-950 to-slate-950" class="peer sr-only" />
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-blue-950 border-2 border-transparent peer-checked:border-white"></div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Ou importer une pochette (optionnel)</label>
+                <input type="file" id="pub-cover-file" accept="image/*"
+                  class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600/20 file:text-sky-300 hover:file:bg-blue-600/30 cursor-pointer" />
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button type="submit"
+                class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-bold text-sm sm:text-base shadow-lg shadow-blue-600/30 transition cursor-pointer">
+                Publier maintenant sur Myzing
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===============================================================
+           ONGLET 4 : ESPACE CRÉATEUR / ADMIN (Strictement privé)
+           =============================================================== -->
+      <section id="tab-admin" class="hidden max-w-6xl mx-auto px-4 pt-6 space-y-6">
+        <!-- Tableau de bord Admin déverrouillé -->
+        <div id="admin-dashboard" class="space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0F1626] border border-blue-500/30 rounded-3xl p-5">
+            <div>
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <span class="inline-block px-2.5 py-0.5 rounded-full bg-blue-600/20 text-sky-400 text-xs font-bold">MODE FONDATEUR PRIVÉ</span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Protection Active : SSL • SMS OTP • Anti-Bot
+                </span>
+              </div>
+              <h2 class="text-xl sm:text-2xl font-extrabold text-white">Fondateur &amp; Administrateur Général : <span class="text-sky-400">ABESSOLO Deniro</span></h2>
+              <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Contrôle intégral des entrées/sorties, sécurité des artistes et auditeurs, et pilotage de Myzing.</p>
+            </div>
+            <button type="button" onclick="lockFounderMode()" class="self-start sm:self-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer whitespace-nowrap">
+              Verrouiller et masquer l'espace
+            </button>
+          </div>
+
+          <!-- Statistiques en direct -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-[#0F1626] border border-slate-800 rounded-2xl p-4">
+              <div class="text-xs text-slate-400">Morceaux en ligne</div>
+              <div id="stat-tracks" class="text-2xl font-black text-white mt-1">0</div>
+              <div class="text-[11px] text-sky-400 mt-1">Actifs sur la plateforme</div>
+            </div>
+            <div class="bg-[#0F1626] border border-slate-800 rounded-2xl p-4">
+              <div class="text-xs text-slate-400">Écoutes cumulées</div>
+              <div id="stat-plays" class="text-2xl font-black text-white mt-1">0</div>
+              <div class="text-[11px] text-emerald-400 mt-1">+18% cette semaine</div>
+            </div>
+            <div class="bg-[#0F1626] border border-slate-800 rounded-2xl p-4">
+              <div class="text-xs text-slate-400">Artistes inscrits</div>
+              <div id="stat-artists" class="text-2xl font-black text-white mt-1">0</div>
+              <div class="text-[11px] text-sky-400 mt-1">Nouveaux talents inclus</div>
+            </div>
+            <div class="bg-[#0F1626] border border-slate-800 rounded-2xl p-4">
+              <div class="text-xs text-slate-400">Modules Monétisation</div>
+              <div id="stat-monetization" class="text-2xl font-black text-sky-400 mt-1">0 / 3</div>
+              <div class="text-[11px] text-slate-400 mt-1">Prêts à activer</div>
+            </div>
+          </div>
+
+          <!-- Deux colonnes : Configuration & Monétisation + Modération des morceaux -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Colonne 1 : Paramètres & Futurs modules de monétisation -->
+            <div class="space-y-6">
+              <!-- Annonce en direct -->
+              <div class="bg-[#0F1626] border border-slate-800 rounded-2xl p-5 space-y-3">
+                <h3 class="font-bold text-white text-sm">Bannière d'annonce en direct</h3>
+                <p class="text-xs text-slate-400">Modifie le message affiché en haut de l'écran pour tous les utilisateurs.</p>
+                <input type="text" id="admin-banner-input"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-[#080B14] border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500" />
+                <button onclick="updatePlatformBanner()"
+                  class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition cursor-pointer">
+                  Mettre à jour la bannière
+                </button>
+              </div>
+
+              <!-- Modules de Monétisation future -->
+              <div class="bg-[#0F1626] border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div>
+                  <h3 class="font-bold text-white text-sm">Monétisation (Phase Croissance)</h3>
+                  <p class="text-xs text-slate-400 mt-0.5">Active ces options dès que ton audience aura décollé.</p>
+                </div>
+
+                <div class="space-y-3">
+                  <label class="flex items-center justify-between p-3 rounded-xl bg-[#080B14] border border-slate-800 cursor-pointer">
+                    <div>
+                      <div class="text-xs font-bold text-white">Myzing Premium (Sans pub)</div>
+                      <div class="text-[11px] text-slate-400">Abonnement mensuel auditeurs</div>
+                    </div>
+                    <input type="checkbox" onchange="toggleMonetization(this, 'Abonnement Premium')" class="w-4 h-4 accent-blue-600 monetization-toggle" />
+                  </label>
+
+                  <label class="flex items-center justify-between p-3 rounded-xl bg-[#080B14] border border-slate-800 cursor-pointer">
+                    <div>
+                      <div class="text-xs font-bold text-white">Boost Visibilité Artiste</div>
+                      <div class="text-[11px] text-slate-400">Propulser un extrait en tête du fil</div>
+                    </div>
+                    <input type="checkbox" onchange="toggleMonetization(this, 'Boost Artiste')" class="w-4 h-4 accent-blue-600 monetization-toggle" />
+                  </label>
+
+                  <label class="flex items-center justify-between p-3 rounded-xl bg-[#080B14] border border-slate-800 cursor-pointer">
+                    <div>
+                      <div class="text-xs font-bold text-white">Soutien Mobile Money</div>
+                      <div class="text-[11px] text-slate-400">Airtel Money / Moov / Orange / Wave</div>
+                    </div>
+                    <input type="checkbox" onchange="toggleMonetization(this, 'Pourboires Mobile Money')" class="w-4 h-4 accent-blue-600 monetization-toggle" />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne 2 & 3 : Gestion & Modération des morceaux -->
+            <div class="lg:col-span-2 bg-[#0F1626] border border-slate-800 rounded-2xl p-5 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-bold text-white text-base">Gestion & Modération des morceaux</h3>
+                  <p class="text-xs text-slate-400">Mets en avant les meilleures pépites ou retire un contenu non conforme.</p>
+                </div>
+              </div>
+
+              <div id="admin-tracks-list" class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+                <!-- Injecté dynamiquement -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- JOURNAL SÉCURITÉ & FLUX EN TEMPS RÉEL (ENTRÉES / SORTIES) -->
+          <div class="bg-[#0F1626] border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <h3 class="font-bold text-white text-base">Journal Sécurité &amp; Flux (Entrées / Sorties)</h3>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">Surveillance en direct de chaque connexion, inscription SMS, publication et déconnexion sur Myzing.</p>
+              </div>
+
+              <!-- Filtres rapides du journal -->
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" onclick="setSecurityFilter('ALL')" data-sec-filter="ALL" class="sec-filter-btn px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold cursor-pointer">Tout</button>
+                <button type="button" onclick="setSecurityFilter('ENTRÉE')" data-sec-filter="ENTRÉE" class="sec-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-semibold cursor-pointer">Entrées</button>
+                <button type="button" onclick="setSecurityFilter('SORTIE')" data-sec-filter="SORTIE" class="sec-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-semibold cursor-pointer">Sorties</button>
+                <button type="button" onclick="setSecurityFilter('PUBLICATION')" data-sec-filter="PUBLICATION" class="sec-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-semibold cursor-pointer">Publications</button>
+                <button type="button" onclick="setSecurityFilter('SÉCURITÉ')" data-sec-filter="SÉCURITÉ" class="sec-filter-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-semibold cursor-pointer">Sécurité</button>
+              </div>
+            </div>
+
+            <!-- Liste des événements enregistrés -->
+            <div id="security-logs-list" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+              <!-- Injecté dynamiquement par renderSecurityLogs() -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- =====================================================================
+         MINI-LECTEUR PERSISTANT EN BAS (Visible quand un son est chargé)
+         ===================================================================== -->
+    <div id="mini-player" class="fixed bottom-16 md:bottom-0 left-0 right-0 z-30 bg-[#0F1626]/95 backdrop-blur-lg border-t border-blue-500/30 px-4 py-2.5 transition-transform duration-300">
+      <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
+        
+        <!-- Infos du morceau en cours -->
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div id="mini-cover" class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-sky-400 flex-shrink-0 flex items-center justify-center text-white font-bold text-xs overflow-hidden">
+            MZ
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span id="mini-title" class="text-sm font-bold text-white truncate">Sélectionne un morceau</span>
+              <span id="mini-badge" class="hidden sm:inline-block px-2 py-0.5 rounded-full bg-blue-600/20 text-sky-400 text-[10px] font-semibold">Extrait 20s</span>
+            </div>
+    <!-- BARRE DE NAVIGATION MOBILE EN BAS (3 onglets publics) -->
+    <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#080B14]/95 backdrop-blur-md border-t border-slate-800 grid grid-cols-3 py-1.5 px-2">
+      <button onclick="switchTab('shorts')" data-tab="shorts" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Découvrir</span>
+      </button>
+      <button onclick="switchTab('catalog')" data-tab="catalog" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        <span>Catalogue</span>
+      </button>
+      <button onclick="switchTab('studio')" data-tab="studio" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        <span>Publier</span>
+      </button>
+      <button id="mobile-admin-nav-btn" onclick="switchTab('admin')" data-tab="admin" class="hidden mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold text-sky-300 cursor-pointer">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span>Créateur</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    /* =========================================================================
+       DONNÉES INITIALES & ÉTAT DE L'APPLICATION MYZING
+       ========================================================================= */
+    const INITIAL_TRACKS = [
+      {
+        id: 'mz-1',
+        title: 'Lumières de l’Estuaire',
+        artist: 'Kévine Flow',
+        country: 'Gabon',
+        genre: 'Afrobeat',
+        vibe: 0,
+        likes: 342,
+        comments: 48,
+        liked: false,
+        followed: false,
+        plays: 1840,
+        featured: true,
+        isNewTalent: true,
+        gradient: 'from-blue-600 via-indigo-900 to-slate-950',
+        coverUrl: null,
+        audioUrl: null
+      },
+      {
+        id: 'mz-2',
+        title: 'Abidjan Minuit',
+        artist: 'Koffi Blaze',
+        country: "Côte d'Ivoire",
+        genre: 'Coupé-Décalé',
+        vibe: 1,
+        likes: 519,
+        comments: 73,
+        liked: false,
+        followed: false,
+        plays: 2910,
+        featured: true,
+        isNewTalent: true,
+        gradient: 'from-sky-500 via-blue-900 to-slate-950',
+        coverUrl: null,
+        audioUrl: null
+      },
+      {
+        id: 'mz-3',
+        title: 'Dakar Horizon',
+        artist: 'Amina Diop',
+        country: 'Sénégal',
+        genre: 'Afro-Soul',
+        vibe: 3,
+        likes: 278,
+        comments: 31,
+        liked: false,
+        followed: false,
+        plays: 1420,
+        featured: false,
+        isNewTalent: true,
+        gradient: 'from-cyan-500 via-teal-900 to-slate-950',
+        coverUrl: null,
+        audioUrl: null
+      },
+      {
+        id: 'mz-4',
+        title: 'Lagos Voltage',
+        artist: 'Tunde Beat',
+        country: 'Nigeria',
+        genre: 'Amapiano',
+        vibe: 1,
+        likes: 684,
+        comments: 95,
+        liked: false,
+        followed: false,
+        plays: 4120,
+        featured: true,
+        isNewTalent: false,
+        gradient: 'from-indigo-600 via-blue-950 to-slate-950',
+        coverUrl: null,
+        audioUrl: null
+      },
+      {
+        id: 'mz-5',
+        title: 'Kinshasa Élévation',
+        artist: 'Junior Makasi',
+        country: 'RDC',
+        genre: 'Rap Afro',
+        vibe: 2,
+        likes: 415,
+        comments: 62,
+        liked: false,
+        followed: false,
+        plays: 2150,
+        featured: false,
+        isNewTalent: true,
+        gradient: 'from-violet-600 via-blue-950 to-slate-950',
+        coverUrl: null,
+        audioUrl: null
+      },
+      {
+        id: 'mz-6',
+        title: 'Douala Soleil',
+        artist: 'Mélissa N.',
+        country: 'Cameroun',
+        genre: 'Afrobeat',
+        vibe: 0,
+        likes: 193,
+        comments: 24,
+        liked: false,
+        followed: false,
+        plays: 980,
+        featured: false,
+        isNewTalent: true,
+        gradient: 'from-blue-500 via-sky-900 to-slate-950',
+        coverUrl: null,
+        audioUrl: null
+      }
+    ];
+
+    let state = {
+      user: null,
+      tracks: [...INITIAL_TRACKS],
+      currentIndex: 0,
+      activeTab: 'shorts',
+      selectedGenre: 'Tous',
+      isPlaying: false,
+      snippetProgress: 0,
+      fullMode: false,
+      isAdminUnlocked: false,
+      monetizationCount: 0,
+      contactMode: 'phone', // 'phone' ou 'email'
+      pendingRegistration: null,
+      generatedOtp: null,
+      resendInterval: null,
+      logoClickCount: 0,
+      logoClickTimer: null,
+      securityFilter: 'ALL',
+      suspendedUsers: [],
+      securityLogs: [
+        {
+          id: 'log-init-1',
+          time: new Date().toLocaleTimeString('fr-FR'),
+          type: 'SÉCURITÉ',
+          actor: 'Système Myzing',
+          detail: 'Pare-feu applicatif, chiffrement HTTPS/SSL et module SMS OTP initialisés.',
+          status: 'Vérifié SSL / Anti-Bot'
+        }
+      ]
+    };
+
+    function logSecurityEvent(type, actor, detail, status = 'Vérifié HTTPS') {
+      const entry = {
+        id: 'log-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        time: new Date().toLocaleTimeString('fr-FR'),
+        type,
+        actor,
+        detail,
+        status
+      };
+      state.securityLogs.unshift(entry);
+      if (state.isAdminUnlocked && state.activeTab === 'admin') {
+        renderSecurityLogs();
+      }
+    }
+
+    function setSecurityFilter(filter) {
+      state.securityFilter = filter;
+      document.querySelectorAll('.sec-filter-btn').forEach(btn => {
+        if (btn.dataset.secFilter === filter) {
+          btn.classList.add('bg-blue-600', 'text-white', 'font-bold');
+          btn.classList.remove('bg-slate-800', 'text-slate-300', 'font-semibold');
+        } else {
+          btn.classList.remove('bg-blue-600', 'text-white', 'font-bold');
+          btn.classList.add('bg-slate-800', 'text-slate-300', 'font-semibold');
+        }
+      });
+      renderSecurityLogs();
+    }
+
+    function toggleSuspendUser(actorName) {
+      if (!actorName || actorName === 'Système Myzing' || actorName === 'ABESSOLO Deniro') {
+        showToast('Ce compte système ou fondateur ne peut pas être suspendu.', 'warning');
+        return;
+      }
+      const idx = state.suspendedUsers.indexOf(actorName);
+      if (idx === -1) {
+        state.suspendedUsers.push(actorName);
+        logSecurityEvent('SÉCURITÉ', 'ABESSOLO Deniro', `Compte "${actorName}" suspendu par le Fondateur.`, 'Blocage actif');
+        showToast(`Compte "${actorName}" bloqué immédiatement.`, 'warning');
+      } else {
+        state.suspendedUsers.splice(idx, 1);
+        logSecurityEvent('SÉCURITÉ', 'ABESSOLO Deniro', `Suspension levée pour "${actorName}".`, 'Compte réactivé');
+        showToast(`Compte "${actorName}" réactivé.`, 'success');
+      }
+      renderSecurityLogs();
+    }
+
+    function renderSecurityLogs() {
+      const container = document.getElementById('security-logs-list');
+      if (!container) return;
+
+      const filtered = state.securityFilter === 'ALL'
+        ? state.securityLogs
+        : state.securityLogs.filter(l => l.type === state.securityFilter);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="text-center py-6 text-xs text-slate-500">Aucun événement dans cette catégorie pour le moment.</div>`;
+        return;
+      }
+
+      const badgeStyles = {
+        'ENTRÉE': 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        'SORTIE': 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+        'PUBLICATION': 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+        'SÉCURITÉ': 'bg-blue-600/20 text-blue-300 border-blue-500/30'
+      };
+
+      container.innerHTML = filtered.map(log => {
+        const isSuspended = state.suspendedUsers.includes(log.actor);
+        const canModerate = log.actor !== 'Système Myzing' && log.actor !== 'ABESSOLO Deniro';
+
+        return `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-[#080B14] border ${isSuspended ? 'border-red-500/50' : 'border-slate-800/90'}">
+            <div class="flex items-start sm:items-center gap-3 min-w-0">
+              <span class="text-[11px] font-mono text-slate-400 flex-shrink-0">${log.time}</span>
+              <span class="px-2 py-0.5 rounded-md border text-[10px] font-extrabold tracking-wide flex-shrink-0 ${badgeStyles[log.type] || badgeStyles['SÉCURITÉ']}">
+                ${log.type}
+              </span>
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-white truncate">
+                  ${log.actor}
+                  ${isSuspended ? '<span class="ml-1.5 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px]">BLOQUÉ</span>' : ''}
+                </div>
+                <div class="text-[11px] text-slate-400 truncate">${log.detail}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+              <span class="px-2 py-0.5 rounded-full bg-slate-800/90 text-[10px] font-semibold text-sky-300">
+                ${log.status}
+              </span>
+              ${
+                canModerate
+                  ? `<button type="button" onclick="toggleSuspendUser('${log.actor.replace(/'/g, "\\'")}')"
+                      class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                        isSuspended
+                          ? 'bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30'
+                          : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
+                      }">
+                      ${isSuspended ? 'Débloquer' : 'Bloquer'}
+                    </button>`
+                  : ''
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    });
+
+    /* =========================================================================
+       SYSTÈME DE NOTIFICATIONS TOAST (Sans alert())
+       ========================================================================= */
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        info: 'bg-[#0F1626] border-blue-500/60 text-sky-100',
+        success: 'bg-[#0F1626] border-emerald-500/60 text-emerald-200',
+        warning: 'bg-[#0F1626] border-amber-500/60 text-amber-200'
+      };
+      toast.className = `${colors[type] || colors.info} border px-4 py-3 rounded-2xl shadow-xl text-xs sm:text-sm font-medium flex items-center justify-between gap-3 pointer-events-auto transition-all duration-300`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-8px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    /* =========================================================================
+       GESTION DE L'AUTHENTIFICATION & VÉRIFICATION PAR SMS (OTP 6 CHIFFRES)
+       ========================================================================= */
+    function toggleAuthMode(mode) {
+      const loginBox = document.getElementById('login-box');
+      const registerBox = document.getElementById('register-box');
+      if (mode === 'register') {
+        loginBox.classList.add('hidden');
+        registerBox.classList.remove('hidden');
+      } else {
+        registerBox.classList.add('hidden');
+        loginBox.classList.remove('hidden');
+      }
+    }
+
+    function toggleContactInputMode() {
+      const phoneWrap = document.getElementById('phone-input-wrapper');
+      const emailWrap = document.getElementById('email-input-wrapper');
+      const btn = document.getElementById('toggle-contact-mode-btn');
+
+      if (state.contactMode === 'phone') {
+        state.contactMode = 'email';
+        phoneWrap.classList.add('hidden');
+        emailWrap.classList.remove('hidden');
+        btn.textContent = 'Utiliser plutôt un numéro SMS';
+      } else {
+        state.contactMode = 'phone';
+        emailWrap.classList.add('hidden');
+        phoneWrap.classList.remove('hidden');
+        btn.textContent = 'Utiliser plutôt un e-mail';
+      }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const idVal = document.getElementById('login-identifier').value.trim();
+      const displayName = idVal.includes('@') ? idVal.split('@')[0] : idVal;
+      const finalUser = displayName || 'Auditeur Myzing';
+      if (state.suspendedUsers.includes(finalUser)) {
+        showToast('Ce compte a été suspendu par l’administrateur Myzing.', 'warning');
+        logSecurityEvent('SÉCURITÉ', finalUser, 'Tentative de connexion bloquée (compte suspendu).', 'Accès refusé');
+        return;
+      }
+      logSecurityEvent('ENTRÉE', finalUser, 'Connexion directe au portail Myzing.', 'Session HTTPS');
+      enterPlatform({
+        name: finalUser,
+        role: 'Auditeur'
+      });
+    });
+
+    document.getElementById('register-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const firstName = document.getElementById('reg-firstname').value.trim();
+      const stageName = document.getElementById('reg-stagename').value.trim();
+      const roleVal = document.querySelector('input[name="userRole"]:checked').value;
+      const finalName = stageName || firstName || 'Nouveau Membre';
+      const roleLabel = roleVal === 'artiste' ? 'Artiste débutant' : 'Auditeur';
+
+      let targetContact = '';
+      if (state.contactMode === 'phone') {
+        const code = document.getElementById('reg-country-code').value;
+        const phone = document.getElementById('reg-phone').value.trim();
+        if (!phone) {
+          showToast('Entre ton numéro de téléphone mobile pour recevoir le code SMS.', 'warning');
+          return;
+        }
+        targetContact = `${code} ${phone}`;
+      } else {
+        const email = document.getElementById('reg-email').value.trim();
+        if (!email) {
+          showToast('Entre ton adresse e-mail.', 'warning');
+          return;
+        }
+        targetContact = email;
+      }
+
+      state.pendingRegistration = {
+        name: finalName,
+        role: roleLabel,
+        roleVal,
+        contact: targetContact
+      };
+
+      openSmsOtpFlow(targetContact);
+    });
+
+    function openSmsOtpFlow(contactDisplay) {
+      // Génération d'un code aléatoire à 6 chiffres
+      state.generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
+
+      document.getElementById('otp-target-phone').textContent = contactDisplay;
+      document.getElementById('sim-sms-code-display').textContent = state.generatedOtp;
+      document.getElementById('otp-error-msg').classList.add('hidden');
+
+      // Réinitialiser les 6 cases
+      const digits = document.querySelectorAll('.otp-digit');
+      digits.forEach(input => { input.value = ''; });
+
+      document.getElementById('sms-otp-modal').classList.remove('hidden');
+      document.getElementById('sms-banner-sim').classList.remove('hidden');
+
+      setTimeout(() => digits[0].focus(), 100);
+      startResendCountdown();
+    }
+
+    function closeOtpModal() {
+      document.getElementById('sms-otp-modal').classList.add('hidden');
+      document.getElementById('sms-banner-sim').classList.add('hidden');
+      clearInterval(state.resendInterval);
+    }
+
+    function copyAndFillOtp() {
+      if (!state.generatedOtp) return;
+      const tempInput = document.createElement('input');
+      tempInput.value = state.generatedOtp;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      const digits = document.querySelectorAll('.otp-digit');
+      state.generatedOtp.split('').forEach((char, idx) => {
+        if (digits[idx]) digits[idx].value = char;
+      });
+      showToast('Code SMS copié et pré-rempli ! Clique sur Continuer.', 'success');
+    }
+
+    function startResendCountdown() {
+      clearInterval(state.resendInterval);
+      let secondsLeft = 30;
+      const btn = document.getElementById('resend-sms-btn');
+      btn.disabled = true;
+      btn.innerHTML = `Renvoyer le SMS (<span id="resend-countdown">${secondsLeft}</span>s)`;
+
+      state.resendInterval = setInterval(() => {
+        secondsLeft -= 1;
+        const span = document.getElementById('resend-countdown');
+        if (span) span.textContent = secondsLeft;
+        if (secondsLeft <= 0) {
+          clearInterval(state.resendInterval);
+          btn.disabled = false;
+          btn.textContent = 'Renvoyer le SMS maintenant';
+        }
+      }, 1000);
+    }
+
+    function resendOtpSms() {
+      if (!state.pendingRegistration) return;
+      openSmsOtpFlow(state.pendingRegistration.contact);
+      showToast('Un nouveau code SMS a été envoyé !', 'info');
+    }
+
+    function verifyOtpCode() {
+      const digits = document.querySelectorAll('.otp-digit');
+      const entered = Array.from(digits).map(d => d.value.trim()).join('');
+      const errEl = document.getElementById('otp-error-msg');
+
+      if (entered.length < 6 || entered !== state.generatedOtp) {
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      errEl.classList.add('hidden');
+      closeOtpModal();
+
+      const reg = state.pendingRegistration;
+      if (!reg) return;
+
+      if (reg.roleVal === 'artiste') {
+        document.getElementById('pub-artist').value = reg.name;
+      }
+
+      logSecurityEvent('ENTRÉE', reg.name, `Inscription validée (${reg.role}) via ${reg.contact}.`, 'Vérifié OTP SMS');
+      enterPlatform({ name: reg.name, role: reg.role });
+      showToast(`Numéro vérifié ! Bienvenue sur Myzing, ${reg.name}.`, 'success');
+
+      if (reg.roleVal === 'artiste') {
+        switchTab('studio');
+      }
+      state.pendingRegistration = null;
+    }
+
+    // Navigation automatique entre les 6 cases OTP
+    document.querySelectorAll('.otp-digit').forEach((input, idx, allInputs) => {
+      input.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/\D/g, '');
+        e.target.value = val.slice(0, 1);
+        if (e.target.value && idx < allInputs.length - 1) {
+          allInputs[idx + 1].focus();
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+          allInputs[idx - 1].focus();
+        }
+        if (e.key === 'Enter') {
+          verifyOtpCode();
+        }
+      });
+
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+        pasted.split('').forEach((ch, i) => {
+          if (allInputs[i]) allInputs[i].value = ch;
+        });
+        if (pasted.length === 6) verifyOtpCode();
+      });
+    });
+
+    function quickProfileLogin(name, role) {
+      if (state.suspendedUsers.includes(name)) {
+        showToast('Ce compte a été suspendu par l’administrateur Myzing.', 'warning');
+        return;
+      }
+      if (role.includes('Artiste')) {
+        document.getElementById('pub-artist').value = name;
+      }
+      logSecurityEvent('ENTRÉE', name, `Connexion rapide (${role}).`, 'Session HTTPS');
+      enterPlatform({ name, role });
+      showToast(`Connecté en tant que ${name} (${role})`, 'success');
+    }
+
+    function quickDemoLogin() {
+      logSecurityEvent('ENTRÉE', 'Moussa B.', 'Entrée en mode découverte démo.', 'Session HTTPS');
+      enterPlatform({ name: 'Moussa B.', role: 'Auditeur' });
+      showToast('Connexion démo réussie ! Clique sur le disque pour écouter.', 'info');
+    }
+
+    /* =========================================================================
+       ACCÈS SECRET AU PANNEAU CRÉATEUR (5 CLICS RAPIDES SUR LE LOGO MYZING)
+       ========================================================================= */
+    function handleLogoSecretTap() {
+      switchTab('shorts');
+      state.logoClickCount += 1;
+      clearTimeout(state.logoClickTimer);
+
+      if (state.logoClickCount >= 5) {
+        state.logoClickCount = 0;
+        if (state.isAdminUnlocked) {
+          switchTab('admin');
+        } else {
+          document.getElementById('admin-pin-input').value = '';
+          document.getElementById('secret-founder-modal').classList.remove('hidden');
+          setTimeout(() => document.getElementById('admin-pin-input').focus(), 100);
+        }
+        return;
+      }
+
+      state.logoClickTimer = setTimeout(() => {
+        state.logoClickCount = 0;
+      }, 1600);
+    }
+
+    function unlockFounderNavigation(unlocked) {
+      const desktopBtn = document.getElementById('desktop-admin-nav-btn');
+      const mobileBtn = document.getElementById('mobile-admin-nav-btn');
+      const mobileNav = document.getElementById('mobile-bottom-nav');
+
+      if (unlocked) {
+        desktopBtn.classList.remove('hidden');
+        mobileBtn.classList.remove('hidden');
+        mobileNav.classList.remove('grid-cols-3');
+        mobileNav.classList.add('grid-cols-4');
+      } else {
+        desktopBtn.classList.add('hidden');
+        mobileBtn.classList.add('hidden');
+        mobileNav.classList.remove('grid-cols-4');
+        mobileNav.classList.add('grid-cols-3');
+      }
+    }
+
+    function lockFounderMode() {
+      state.isAdminUnlocked = false;
+      logSecurityEvent('SÉCURITÉ', 'ABESSOLO Deniro', 'Verrouillage manuel de l’Espace Créateur.', 'Mode privé actif');
+      unlockFounderNavigation(false);
+      switchTab('shorts');
+      showToast('Espace Créateur verrouillé et masqué.', 'info');
+    }
+
+    function enterPlatform(user) {
+      state.user = user;
+      document.getElementById('user-display-name').textContent = user.name;
+      document.getElementById('user-display-role').textContent = user.role;
+      document.getElementById('user-avatar').textContent = user.name.charAt(0).toUpperCase();
+
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+
+      unlockFounderNavigation(state.isAdminUnlocked);
+      updateMiniPlayerUI();
+      renderActiveShort();
+      renderCatalog();
+      renderAdminPanel();
+      switchTab(state.activeTab);
+    }
+
+    function logout() {
+      if (state.user) {
+        logSecurityEvent('SORTIE', state.user.name, `Déconnexion volontaire (${state.user.role}).`, 'Session fermée');
+      }
+      stopPlayback();
+      state.user = null;
+      state.isAdminUnlocked = false;
+      unlockFounderNavigation(false);
+      document.getElementById('app-screen').classList.add('hidden');
+      document.getElementById('auth-screen').classList.remove('hidden');
+    }
+
+    /* =========================================================================
+       NAVIGATION ENTRE LES ONGLETS
+       ========================================================================= */
+    class MyzingAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.intervalId = null;
+        this.step = 0;
+        this.isPlaying = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playKick(time, punch = 140) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(punch, time);
+        osc.frequency.exponentialRampToValueAtTime(38, time + 0.14);
+
+        gain.gain.setValueAtTime(0.65, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(time);
+        osc.stop(time + 0.23);
+      }
+
+      playRimOrSnare(time, isLogDrum = false) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = isLogDrum ? 'triangle' : 'square';
+        osc.frequency.setValueAtTime(isLogDrum ? 190 : 320, time);
+        osc.frequency.exponentialRampToValueAtTime(isLogDrum ? 65 : 110, time + 0.11);
+
+        gain.gain.setValueAtTime(isLogDrum ? 0.45 : 0.22, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.13);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(time);
+        osc.stop(time + 0.14);
+      }
+
+      playMelodyNote(time, freq, duration = 0.22) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, time);
+
+        gain.gain.setValueAtTime(0.001, time);
+        gain.gain.linearRampToValueAtTime(0.18, time + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(time);
+        osc.stop(time + duration + 0.02);
+      }
+
+      start(vibeIndex = 0) {
+        this.stop();
+        this.init();
+        this.isPlaying = true;
+        this.step = 0;
+
+        const patterns = [
+          // 0: Groove Afrobeat Solaire
+          {
+            tempoMs: 138,
+            kicks: [0, 6, 8, 14],
+            snares: [3, 11],
+            notes: { 0: 329.63, 3: 392.00, 6: 440.00, 8: 329.63, 11: 493.88, 14: 392.00 },
+            logDrum: false
+          },
+          // 1: Basse Amapiano Nocturne
+          {
+            tempoMs: 130,
+            kicks: [0, 4, 8, 12],
+            snares: [3, 6, 11, 14],
+            notes: { 0: 220.00, 4: 261.63, 7: 293.66, 10: 329.63, 14: 261.63 },
+            logDrum: true
+          },
+          // 2: Rap Afro / Drill Percutant
+          {
+            tempoMs: 118,
+            kicks: [0, 7, 10],
+            snares: [4, 12, 15],
+            notes: { 0: 246.94, 2: 261.63, 6: 329.63, 10: 293.66, 14: 246.94 },
+            logDrum: false
+          },
+          // 3: Mélodie Douce Afro-Soul
+          {
+            tempoMs: 155,
+            kicks: [0, 8],
+            snares: [4, 12],
+            notes: { 0: 349.23, 2: 440.00, 4: 523.25, 8: 392.00, 10: 493.88, 12: 587.33 },
+            logDrum: false
+          }
+        ];
+
+        const pat = patterns[vibeIndex % patterns.length];
+
+        const tick = () => {
+          if (!this.isPlaying) return;
+          const now = this.ctx.currentTime;
+          const s = this.step % 16;
+
+          if (pat.kicks.includes(s)) this.playKick(now);
+          if (pat.snares.includes(s)) this.playRimOrSnare(now, pat.logDrum);
+          if (pat.notes[s]) this.playMelodyNote(now, pat.notes[s], 0.26);
+
+          this.step++;
+        };
+
+        tick();
+        this.intervalId = setInterval(tick, pat.tempoMs);
+      }
+
+      stop() {
+        this.isPlaying = false;
+        if (this.intervalId) {
+          clearInterval(this.intervalId);
+          this.intervalId = null;
+        }
+      }
+    }
+
+    const audioEngine = new MyzingAudioEngine();
+    let progressTimer = null;
+
+    /* =========================================================================
+       GESTION DE L'AUTHENTIFICATION (Style Facebook)
+       ========================================================================= */
+    function toggleAuthMode(mode) {
+      const loginBox = document.getElementById('login-box');
+      const registerBox = document.getElementById('register-box');
+      if (mode === 'register') {
+        loginBox.classList.add('hidden');
+        registerBox.classList.remove('hidden');
+      } else {
+        registerBox.classList.add('hidden');
+        loginBox.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const idVal = document.getElementById('login-identifier').value.trim();
+      const displayName = idVal.includes('@') ? idVal.split('@')[0] : idVal;
+      enterPlatform({
+        name: displayName || 'Auditeur Myzing',
+        role: 'Auditeur'
+      });
+    });
+
+    document.getElementById('register-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const firstName = document.getElementById('reg-firstname').value.trim();
+      const stageName = document.getElementById('reg-stagename').value.trim();
+      const roleVal = document.querySelector('input[name="userRole"]:checked').value;
+
+      const finalName = stageName || firstName || 'Nouveau Membre';
+      const roleLabel = roleVal === 'artiste' ? 'Artiste débutant' : 'Auditeur';
+
+      // Pré-remplir le nom d'artiste dans le studio si l'utilisateur s'inscrit en tant qu'artiste
+      if (roleVal === 'artiste') {
+        document.getElementById('pub-artist').value = finalName;
+      }
+
+      enterPlatform({ name: finalName, role: roleLabel });
+      showToast(`Bienvenue sur Myzing, ${finalName} (${roleLabel}) !`, 'success');
+
+      if (roleVal === 'artiste') {
+        switchTab('studio');
+      }
+    });
+
+    function quickDemoLogin() {
+      enterPlatform({ name: 'Moussa B.', role: 'Auditeur' });
+      showToast('Connexion démo réussie ! Clique sur Lecture pour écouter les extraits.', 'info');
+    }
+
+    function openFounderAccess() {
+      state.isAdminUnlocked = true;
+      enterPlatform({ name: 'Fondateur Myzing', role: 'Créateur (Admin)' });
+      switchTab('admin');
+      showToast('Accès Créateur déverrouillé.', 'success');
+    }
+
+    function enterPlatform(user) {
+      state.user = user;
+      document.getElementById('user-display-name').textContent = user.name;
+      document.getElementById('user-display-role').textContent = user.role;
+      document.getElementById('user-avatar').textContent = user.name.charAt(0).toUpperCase();
+
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+
+      updateMiniPlayerUI();
+      renderActiveShort();
+      renderCatalog();
+      renderAdminPanel();
+      switchTab(state.activeTab);
+    }
+
+    function logout() {
+      stopPlayback();
+      state.user = null;
+      document.getElementById('app-screen').classList.add('hidden');
+      document.getElementById('auth-screen').classList.remove('hidden');
+    }
+
+    /* =========================================================================
+       NAVIGATION ENTRE LES 4 ONGLETS
+       ========================================================================= */
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      const tabs = ['shorts', 'catalog', 'studio', 'admin'];
+      tabs.forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        if (t === tabName) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+
+      // Mise à jour visuelle des boutons de navigation (Desktop & Mobile)
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+          btn.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-600/25');
+          btn.classList.remove('text-slate-400', 'hover:text-white');
+        } else {
+          btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-600/25');
+          btn.classList.add('text-slate-400', 'hover:text-white');
+        }
+      });
+
+      document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+          btn.classList.add('text-sky-400', 'bg-blue-600/15');
+          btn.classList.remove('text-slate-400');
+        } else {
+          btn.classList.remove('text-sky-400', 'bg-blue-600/15');
+          btn.classList.add('text-slate-400');
+        }
+      });
+
+      if (tabName === 'admin') {
+        renderAdminPanel();
+      }
+    }
+
+    /* =========================================================================
+       CONTRÔLE DE LA LECTURE AUDIO (Fichier MP3/WAV local OU Synthétiseur)
+       ========================================================================= */
+    function startPlayback(fullTrack = false) {
+      const track = state.tracks[state.currentIndex];
+      if (!track) return;
+
+      state.isPlaying = true;
+      state.fullMode = fullTrack;
+      track.plays += 1;
+
+      // Arrêter les deux sources avant de lancer la bonne
+      audioEngine.stop();
+      htmlAudioPlayer.pause();
+
+      if (track.audioUrl) {
+        htmlAudioPlayer.src = track.audioUrl;
+        htmlAudioPlayer.currentTime = state.snippetProgress;
+        htmlAudioPlayer.play().catch(() => {
+          audioEngine.start(track.vibe);
+        });
+      } else {
+        audioEngine.start(track.vibe);
+      }
+
+      clearInterval(progressTimer);
+      progressTimer = setInterval(() => {
+        if (!state.isPlaying) return;
+        state.snippetProgress += 0.25;
+        const maxDuration = state.fullMode ? 180 : 20;
+
+        if (state.snippetProgress >= maxDuration) {
+          state.snippetProgress = 0;
+          if (!state.fullMode && state.activeTab === 'shorts') {
+            nextShort();
+            return;
+          }
+        }
+        updateProgressBarOnly();
+      }, 250);
+
+      updateMiniPlayerUI();
+      renderActiveShort();
+      renderCatalog();
+    }
+
+    function stopPlayback() {
+      state.isPlaying = false;
+      audioEngine.stop();
+      htmlAudioPlayer.pause();
+      clearInterval(progressTimer);
+      updateMiniPlayerUI();
+      renderActiveShort();
+      renderCatalog();
+    }
+
+    function togglePlayCurrent() {
+      if (state.isPlaying) {
+        stopPlayback();
+      } else {
+        startPlayback(state.fullMode);
+      }
+    }
+
+    function playTrackById(id, fullTrack = true) {
+      const idx = state.tracks.findIndex(t => t.id === id);
+      if (idx !== -1) {
+        state.currentIndex = idx;
+        state.snippetProgress = 0;
+        startPlayback(fullTrack);
+      }
+    }
+
+    function updateProgressBarOnly() {
+      const bar = document.getElementById('short-progress-bar');
+      const timeLabel = document.getElementById('short-time-label');
+      if (bar) {
+        const maxDur = state.fullMode ? 180 : 20;
+        const pct = Math.min(100, (state.snippetProgress / maxDur) * 100);
+        bar.style.width = `${pct}%`;
+      }
+      if (timeLabel) {
+        const sec = Math.floor(state.snippetProgress);
+        const maxDur = state.fullMode ? 180 : 20;
+        timeLabel.textContent = `0:${sec < 10 ? '0' + sec : sec} / ${state.fullMode ? '3:00' : '0:20'}`;
+      }
+    }
+
+    function updateMiniPlayerUI() {
+      const track = state.tracks[state.currentIndex];
+      if (!track) return;
+
+      document.getElementById('mini-title').textContent = track.title;
+      document.getElementById('mini-artist').textContent = `${track.artist} • ${track.country}`;
+      document.getElementById('mini-badge').textContent = state.fullMode ? 'Lecture complète' : 'Extrait 20s';
+
+      const coverEl = document.getElementById('mini-cover');
+      if (track.coverUrl) {
+        coverEl.innerHTML = `<img src="${track.coverUrl}" class="w-full h-full object-cover" alt="${track.title}" />`;
+      } else {
+        coverEl.className = `w-10 h-10 rounded-xl bg-gradient-to-br ${track.gradient} flex-shrink-0 flex items-center justify-center text-white font-bold text-xs`;
+        coverEl.textContent = track.artist.slice(0, 2).toUpperCase();
+      }
+
+      const eq = document.getElementById('mini-eq');
+      const playIcon = document.getElementById('mini-play-icon');
+      if (state.isPlaying) {
+        eq.classList.add('eq-playing');
+        playIcon.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+      } else {
+        eq.classList.remove('eq-playing');
+        playIcon.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+      }
+    }
+
+    /* =========================================================================
+       ONGLET 1 : FIL D'EXTRAITS VERTICAUX (TikTok / Snapchat Shorts)
+       ========================================================================= */
+    function renderActiveShort() {
+      const container = document.getElementById('short-card-container');
+      const track = state.tracks[state.currentIndex];
+      if (!track) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400">Aucun morceau disponible.</div>`;
+        return;
+      }
+
+      const maxDur = state.fullMode ? 180 : 20;
+      const pct = Math.min(100, (state.snippetProgress / maxDur) * 100);
+      const sec = Math.floor(state.snippetProgress);
+
+      container.className = `w-full h-full rounded-3xl overflow-hidden border border-slate-700/80 shadow-2xl shadow-blue-950/60 relative flex flex-col justify-between p-5 select-none bg-gradient-to-b ${track.gradient} afro-pattern`;
+
+      container.innerHTML = `
+        <!-- Couche sombre pour lisibilité parfaite -->
+        <div class="absolute inset-0 bg-gradient-to-t from-[#080B14] via-[#080B14]/35 to-[#080B14]/60 pointer-events-none"></div>
+
+        <!-- HAUT DE LA CARTE : Pays, Genre & Indicateur d'extrait -->
+        <div class="relative z-10 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-3 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-xs font-bold text-white">
+              ${track.country}
+            </span>
+            <span class="px-3 py-1 rounded-full bg-blue-600/40 backdrop-blur-md border border-sky-400/30 text-xs font-semibold text-sky-200">
+              ${track.genre}
+            </span>
+          </div>
+          <span class="text-xs font-bold text-slate-300 bg-black/40 px-2.5 py-1 rounded-full">
+            ${state.currentIndex + 1} / ${state.tracks.length}
+          </span>
+        </div>
+
+        <!-- CENTRE : Pochette animée & Bouton Play central -->
+        <div class="relative z-10 flex flex-col items-center justify-center my-auto py-2">
+          <div onclick="togglePlayCurrent()" class="relative w-44 h-44 sm:w-52 sm:h-52 rounded-full p-2 bg-gradient-to-tr from-blue-600 via-sky-400 to-indigo-600 shadow-2xl shadow-blue-600/40 cursor-pointer group">
+            <div class="w-full h-full rounded-full overflow-hidden bg-[#0F1626] flex items-center justify-center relative ${state.isPlaying ? 'spin-disc' : 'spin-disc spin-paused'}">
+              ${
+                track.coverUrl
+                  ? `<img src="${track.coverUrl}" class="w-full h-full object-cover" alt="${track.title}" />`
+                  : `<div class="w-full h-full bg-gradient-to-br ${track.gradient} flex flex-col items-center justify-center p-4 text-center">
+                      <span class="text-3xl font-black text-white/90 tracking-tighter">${track.artist.slice(0, 2).toUpperCase()}</span>
+                      <span class="text-[10px] uppercase tracking-widest text-sky-300 mt-1">Myzing Studio</span>
+                    </div>`
+              }
+              <div class="w-8 h-8 rounded-full bg-[#080B14] border-2 border-sky-400 absolute"></div>
+            </div>
+
+            <!-- Bouton Play/Pause flottant au centre -->
+            <button type="button" aria-label="Lire ou mettre en pause"
+              class="absolute inset-0 m-auto w-14 h-14 rounded-full bg-blue-600/90 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg transition transform group-hover:scale-105">
+              ${
+                state.isPlaying
+                  ? `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`
+                  : `<svg class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`
+              }
+            </button>
+          </div>
+
+          <p class="mt-3 text-xs font-medium text-sky-300/90 bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">
+            ${state.isPlaying ? 'En écoute — Égaliseur actif' : 'Appuie sur le disque pour écouter l’extrait'}
+          </p>
+        </div>
+
+        <!-- BAS DE LA CARTE : Infos artiste + Actions latérales style TikTok -->
+        <div class="relative z-10 flex items-end justify-between gap-3">
+          
+          <!-- Infos morceau & barre de progression -->
+          <div class="flex-1 min-w-0 space-y-2.5">
+            <div class="flex items-center gap-2 flex-wrap">
+              ${track.isNewTalent ? `<span class="px-2.5 py-0.5 rounded-md bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[11px] font-bold">Nouveau talent</span>` : ''}
+              ${track.featured ? `<span class="px-2.5 py-0.5 rounded-md bg-blue-600/30 border border-blue-400/40 text-blue-200 text-[11px] font-bold">À la une</span>` : ''}
+            </div>
+
+            <div>
+              <h3 class="text-xl sm:text-2xl font-extrabold text-white truncate">${track.title}</h3>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-sm font-semibold text-slate-200">${track.artist}</span>
+                <button onclick="toggleFollow('${track.id}')"
+                  class="px-2.5 py-0.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                    track.followed
+                      ? 'bg-slate-700 text-slate-200'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white'
+                  }">
+                  ${track.followed ? 'Suivi ✓' : '+ Suivre'}
+                </button>
+              </div>
+            </div>
+
+            <!-- Barre de progression de l'extrait -->
+            <div class="space-y-1 pt-1">
+              <div class="flex justify-between text-[11px] text-slate-300 font-medium">
+                <span>${state.fullMode ? 'Mode Morceau Complet' : 'Extrait découverte (20s)'}</span>
+                <span id="short-time-label">0:${sec < 10 ? '0' + sec : sec} / ${state.fullMode ? '3:00' : '0:20'}</span>
+              </div>
+              <div class="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div id="short-progress-bar" class="h-full bg-gradient-to-r from-blue-500 to-sky-300 transition-all duration-200" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Colonne d'actions à droite (Like, Partager, Écouter en entier, Suivant) -->
+          <div class="flex flex-col items-center gap-3.5 pb-1">
+            <!-- Like -->
+            <button onclick="toggleLike('${track.id}')" class="flex flex-col items-center gap-1 group cursor-pointer">
+              <div class="w-11 h-11 rounded-full ${track.liked ? 'bg-blue-600 text-white' : 'bg-black/50 text-white hover:bg-blue-600/40'} backdrop-blur-md border border-white/15 flex items-center justify-center transition">
+                <svg class="w-5 h-5" fill="${track.liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </div>
+              <span class="text-xs font-bold text-white">${track.likes}</span>
+            </button>
+
+            <!-- Commentaires -->
+            <button onclick="commentTrack('${track.id}')" class="flex flex-col items-center gap-1 cursor-pointer">
+              <div class="w-11 h-11 rounded-full bg-black/50 hover:bg-blue-600/40 text-white backdrop-blur-md border border-white/15 flex items-center justify-center transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <span class="text-xs font-bold text-white">${track.comments || 0}</span>
+            </button>
+
+            <!-- Écouter en entier -->
+            <button onclick="switchToFullSong()" class="flex flex-col items-center gap-1 cursor-pointer" title="Écouter le morceau complet">
+              <div class="w-11 h-11 rounded-full ${state.fullMode ? 'bg-sky-500 text-slate-950' : 'bg-black/50 text-sky-300 hover:bg-sky-500/30'} backdrop-blur-md border border-white/15 flex items-center justify-center transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                </svg>
+              </div>
+              <span class="text-[10px] font-semibold text-slate-200">Entier</span>
+            </button>
+
+            <!-- Partager -->
+            <button onclick="shareTrack('${track.id}')" class="flex flex-col items-center gap-1 cursor-pointer">
+              <div class="w-11 h-11 rounded-full bg-black/50 hover:bg-blue-600/40 text-white backdrop-blur-md border border-white/15 flex items-center justify-center transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </div>
+              <span class="text-[10px] font-semibold text-slate-200">Partager</span>
+            </button>
+
+            <!-- Bouton Suivant rapide sur mobile -->
+            <button onclick="nextShort()" class="sm:hidden flex flex-col items-center gap-1 cursor-pointer">
+              <div class="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              <span class="text-[10px] font-bold text-sky-300">Suivant</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function nextShort() {
+      if (state.tracks.length === 0) return;
+      state.currentIndex = (state.currentIndex + 1) % state.tracks.length;
+      state.snippetProgress = 0;
+      if (state.isPlaying) {
+        startPlayback(false);
+      } else {
+        updateMiniPlayerUI();
+        renderActiveShort();
+      }
+    }
+
+    function prevShort() {
+      if (state.tracks.length === 0) return;
+      state.currentIndex = (state.currentIndex - 1 + state.tracks.length) % state.tracks.length;
+      state.snippetProgress = 0;
+      if (state.isPlaying) {
+        startPlayback(false);
+      } else {
+        updateMiniPlayerUI();
+        renderActiveShort();
+      }
+    }
+
+    function switchToFullSong() {
+      state.fullMode = !state.fullMode;
+      if (!state.isPlaying) {
+        startPlayback(state.fullMode);
+      } else {
+        updateMiniPlayerUI();
+        renderActiveShort();
+      }
+      showToast(state.fullMode ? 'Lecture du morceau complet activée.' : 'Retour au mode extrait de 20 secondes.', 'info');
+    }
+
+    function toggleLike(id) {
+      const track = state.tracks.find(t => t.id === id);
+      if (!track) return;
+      track.liked = !track.liked;
+      track.likes += track.liked ? 1 : -1;
+      renderActiveShort();
+      renderCatalog();
+    }
+
+    function commentTrack(id) {
+      const track = state.tracks.find(t => t.id === id);
+      if (!track) return;
+      track.comments = (track.comments || 0) + 1;
+      renderActiveShort();
+      showToast(`Ton encouragement a été envoyé à ${track.artist} !`, 'info');
+    }
+
+    function toggleFollow(id) {
+      const track = state.tracks.find(t => t.id === id);
+      if (!track) return;
+      track.followed = !track.followed;
+      showToast(track.followed ? `Tu suis désormais ${track.artist} !` : `Abonnement retiré pour ${track.artist}.`, 'info');
+      renderActiveShort();
+    }
+
+    function shareTrack(id) {
+      const track = state.tracks.find(t => t.id === id);
+      if (!track) return;
+      const shareText = `Écoute "${track.title}" de ${track.artist} (${track.country}) sur Myzing !`;
+      const tempInput = document.createElement('input');
+      tempInput.value = shareText;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      showToast('Lien de partage copié dans le presse-papiers !', 'success');
+    }
+
+    // Navigation tactile (Swipe Haut/Bas) et molette sur le lecteur Shorts
+    let touchStartY = 0;
+    const shortContainer = document.getElementById('short-card-container');
+    shortContainer.addEventListener('touchstart', (e) => {
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    shortContainer.addEventListener('touchend', (e) => {
+      const touchEndY = e.changedTouches[0].screenY;
+      const diff = touchStartY - touchEndY;
+      if (Math.abs(diff) > 45) {
+        if (diff > 0) nextShort();
+        else prevShort();
+      }
+    }, { passive: true });
+
+    let wheelLock = false;
+    shortContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (wheelLock) return;
+      wheelLock = true;
+      if (e.deltaY > 0) nextShort();
+      else prevShort();
+      setTimeout(() => { wheelLock = false; }, 450);
+    }, { passive: false });
+
+    /* =========================================================================
+       ONGLET 3 : STUDIO ARTISTE (Publication MP3/WAV ou Beat généré)
+       ========================================================================= */
+    document.getElementById('publish-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = document.getElementById('pub-title').value.trim();
+      const artist = document.getElementById('pub-artist').value.trim();
+      const country = document.getElementById('pub-country').value;
+      const genre = document.getElementById('pub-genre').value;
+      const vibe = parseInt(document.getElementById('pub-vibe').value, 10);
+      const gradient = document.querySelector('input[name="pubGradient"]:checked').value;
+      const coverInput = document.getElementById('pub-cover-file');
+      const audioInput = document.getElementById('pub-audio-file');
+
+      const uploadedAudioUrl = (audioInput.files && audioInput.files[0])
+        ? URL.createObjectURL(audioInput.files[0])
+        : null;
+
+      const finalizePublish = (coverDataUrl) => {
+        const newTrack = {
+          id: 'mz-' + Date.now(),
+          title,
+          artist,
+          country,
+          genre,
+          vibe,
+          likes: 1,
+          comments: 0,
+          liked: true,
+          followed: false,
+          plays: 1,
+          featured: true,
+          isNewTalent: true,
+          gradient,
+          coverUrl: coverDataUrl,
+          audioUrl: uploadedAudioUrl
+        };
+
+        state.tracks.unshift(newTrack);
+        state.currentIndex = 0;
+        state.snippetProgress = 0;
+
+        logSecurityEvent(
+          'PUBLICATION',
+          artist,
+          `Nouveau morceau publié : "${title}" (${country} • ${genre}).`,
+          uploadedAudioUrl ? 'Fichier audio vérifié' : 'Beat Studio vérifié'
+        );
+
+        document.getElementById('publish-form').reset();
+        showToast(
+          uploadedAudioUrl
+            ? `Ton fichier audio "${title}" est en ligne sur Myzing !`
+            : `Ton morceau "${title}" est en ligne sur Myzing !`,
+          'success'
+        );
+
+        switchTab('shorts');
+        startPlayback(false);
+        renderCatalog();
+        renderAdminPanel();
+      };
+
+      if (coverInput.files && coverInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (ev) => finalizePublish(ev.target.result);
+        reader.readAsDataURL(coverInput.files[0]);
+      } else {
+        finalizePublish(null);
+      }
+    });
+
+    /* =========================================================================
+       ONGLET 4 : ESPACE CRÉATEUR / ADMIN (Strictement privé)
+       ========================================================================= */
+    function verifyAdminPin(e) {
+      e.preventDefault();
+      const pin = document.getElementById('admin-pin-input').value.trim();
+      if (pin === '1234') {
+        state.isAdminUnlocked = true;
+        document.getElementById('secret-founder-modal').classList.add('hidden');
+        logSecurityEvent('SÉCURITÉ', 'ABESSOLO Deniro', 'Déverrouillage de l’Espace Créateur via PIN secret.', 'Auth Fondateur OK');
+        unlockFounderNavigation(true);
+        switchTab('admin');
+        renderAdminPanel();
+        showToast('Bienvenue dans votre espace privé, ABESSOLO Deniro !', 'success');
+      } else {
+        logSecurityEvent('SÉCURITÉ', 'Inconnu', 'Tentative échouée d’accès PIN Fondateur.', 'Alerte bloquée');
+        showToast('Code PIN incorrect.', 'warning');
+      }
+    }
+
+    function renderAdminPanel() {
+      if (!state.isAdminUnlocked) {
+        return;
+      }
+
+      renderSecurityLogs();
+
+      // Statistiques
+      const totalPlays = state.tracks.reduce((acc, t) => acc + t.plays, 0);
+      const uniqueArtists = new Set(state.tracks.map(t => t.artist)).size;
+
+      document.getElementById('stat-tracks').textContent = state.tracks.length;
+      document.getElementById('stat-plays').textContent = totalPlays.toLocaleString('fr-FR');
+      document.getElementById('stat-artists').textContent = uniqueArtists;
+      document.getElementById('stat-monetization').textContent = `${state.monetizationCount} / 3`;
+
+      // Pré-remplir le champ de bannière
+      document.getElementById('admin-banner-input').value = document.getElementById('banner-text').textContent;
+
+      // Liste de modération des morceaux
+      const listEl = document.getElementById('admin-tracks-list');
+      listEl.innerHTML = state.tracks.map(track => `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-[#080B14] border border-slate-800">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-sm text-white truncate">${track.title}</span>
+              ${track.featured ? '<span class="px-2 py-0.5 rounded bg-blue-600/25 text-sky-400 text-[10px] font-bold">À la une</span>' : ''}
+            </div>
+            <div class="text-xs text-slate-400">${track.artist} • ${track.country} • ${track.genre} (${track.plays} écoutes)</div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button onclick="toggleFeaturedTrack('${track.id}')"
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                track.featured
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-400/40'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }">
+              ${track.featured ? 'Retirer Une' : 'Mettre à la Une'}
+            </button>
+            <button onclick="deleteTrackAdmin('${track.id}')"
+              class="px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 text-xs font-semibold transition cursor-pointer">
+              Supprimer
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updatePlatformBanner() {
+      const val = document.getElementById('admin-banner-input').value.trim();
+      if (val) {
+        document.getElementById('banner-text').textContent = val;
+        showToast('Bannière d’annonce mise à jour en direct !', 'success');
+      }
+    }
+
+    function toggleMonetization(checkbox, label) {
+      const toggles = document.querySelectorAll('.monetization-toggle:checked');
+      state.monetizationCount = toggles.length;
+      document.getElementById('stat-monetization').textContent = `${state.monetizationCount} / 3`;
+      showToast(
+        checkbox.checked
+          ? `Module "${label}" activé dans la configuration.`
+          : `Module "${label}" mis en veille.`,
+        'info'
+      );
+    }
+
+    function toggleFeaturedTrack(id) {
+      const track = state.tracks.find(t => t.id === id);
+      if (!track) return;
+      track.featured = !track.featured;
+      renderAdminPanel();
+      renderActiveShort();
+      showToast(track.featured ? `"${track.title}" mis à la une !` : `"${track.title}" retiré de la une.`, 'info');
+    }
+
+    function deleteTrackAdmin(id) {
+      if (state.tracks.length <= 1) {
+        showToast('Garde au moins un morceau sur la plateforme.', 'warning');
+        return;
+      }
+      state.tracks = state.tracks.filter(t => t.id !== id);
+      if (state.currentIndex >= state.tracks.length) {
+        state.currentIndex = 0;
+      }
+      renderAdminPanel();
+      renderActiveShort();
+      renderCatalog();
+      updateMiniPlayerUI();
+      showToast('Morceau supprimé de la plateforme.', 'info');
+    }
+  </script>
+</body>
+</html>
